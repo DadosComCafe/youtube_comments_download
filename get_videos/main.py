@@ -7,7 +7,7 @@ from utils import chunkify
 
 logging.basicConfig(level=logging.INFO)
 
-def get_video_content(video_id: str, api_key: str) -> tuple | str:
+def get_video_content(video_id: str, api_key: str) -> list | str:
     page_token = ""
     target_url = f"https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet&part=replies&pageToken={page_token}&videoId={video_id}&key={api_key}&alt=json"
     video_request = requests.get(target_url)
@@ -28,7 +28,8 @@ def get_video_content(video_id: str, api_key: str) -> tuple | str:
             items_content.extend(json_content["items"])
             next_page_token = json_content.get("nextPageToken", "")
             logging.info(f"Using the token to get next page: {next_page_token}")
-        return items_content, json_content["items"][0]["snippet"]["videoId"]
+        logging.info(f"Total number of records: {len(items_content)}")
+        return items_content
 
     return "Video fora do ar!"
 
@@ -66,6 +67,6 @@ if __name__ == "__main__":
         "mongo_host": config("MONGO_HOST"),
         "mongo_port": config("MONGO_PORT")
     }
-
-    video_content, video_id = get_video_content(video_id="PzUmRTcozms", api_key=my_api_key)
+    video_id = "PzUmRTcozms"
+    video_content = get_video_content(video_id=video_id, api_key=my_api_key)
     send_json_to_mongo(dict_credentials=dict_credentials, items_content=video_content, video_id=video_id)

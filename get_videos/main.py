@@ -1,9 +1,13 @@
 import requests
 import json
 import logging
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
+from math import ceil
+from utils import chunkify
 
-def get_video_content(video_id: str, api_key: str) -> tuple:
+logging.basicConfig(level=logging.INFO)
+
+def get_video_content(video_id: str, api_key: str) -> tuple | str:
     page_token = ""
     target_url = f"https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet&part=replies&pageToken={page_token}&videoId={video_id}&key={api_key}&alt=json"
     video_request = requests.get(target_url)
@@ -33,8 +37,19 @@ def send_json_to_mongo(dict_credentials: dict, items_content: json, video_id: st
     client = MongoClient(connection_config)
     collection = client["youtube_comments"][video_id]
     try:
+        operations = []
         for item in items_content:
-            collection.insert_one(item)
+            id_comment = item["snippet"]["topLevelComment"]["id"]
+            filter_comment_id = {"commentId": id_comment}
+
+            operations.append(
+                UpdateOne(filter_comment_id, {"$set": item}, upsert=True)
+            )
+        for index, chunk in enumerate(chunkify(operations, 100)):
+            n_ops = ceil(len(operations) / 100)
+            logging.info(f"Executing inserting in collection, chunk {index + 1}/{n_ops}")
+            result = collection.bulk_write(chunk, ordered=False)
+            logging.info(f"{result.bulk_api_result}\n")
         logging.info(f"The json content has been inserted successfully for the video_id: {video_id}")
     except Exception as e:
         raise Exception(f"An error: {e}")
@@ -44,7 +59,6 @@ def send_json_to_mongo(dict_credentials: dict, items_content: json, video_id: st
 
 if __name__ == "__main__":
     from decouple import config
-    import ipdb
     my_api_key = config("API_KEY")
     dict_credentials = {
         "mongo_user": config("MONGO_USERNAME"),
@@ -52,7 +66,6 @@ if __name__ == "__main__":
         "mongo_host": config("MONGO_HOST"),
         "mongo_port": config("MONGO_PORT")
     }
-    video_content, video_id = get_video_content(video_id="PzUmRTcozms", api_key=my_api_key)
-    #ipdb.set_trace()
 
+    video_content, video_id = get_video_content(video_id="PzUmRTcozms", api_key=my_api_key)
     send_json_to_mongo(dict_credentials=dict_credentials, items_content=video_content, video_id=video_id)

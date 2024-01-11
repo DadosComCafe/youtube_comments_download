@@ -2,6 +2,10 @@ import requests
 import json
 import logging
 from pymongo import MongoClient, UpdateOne
+from math import ceil
+from utils import chunkify
+
+logging.basicConfig(level=logging.INFO)
 
 def get_video_content(video_id: str, api_key: str) -> tuple | str:
     page_token = ""
@@ -41,8 +45,11 @@ def send_json_to_mongo(dict_credentials: dict, items_content: json, video_id: st
             operations.append(
                 UpdateOne(filter_comment_id, {"$set": item}, upsert=True)
             )
-        
-        collection.bulk_write(operations)
+        for index, chunk in enumerate(chunkify(operations, 100)):
+            n_ops = ceil(len(operations) / 100)
+            logging.info(f"Executing inserting in collection, chunk {index + 1}/{n_ops}")
+            result = collection.bulk_write(chunk, ordered=False)
+            logging.info(f"{result.bulk_api_result}\n")
         logging.info(f"The json content has been inserted successfully for the video_id: {video_id}")
     except Exception as e:
         raise Exception(f"An error: {e}")

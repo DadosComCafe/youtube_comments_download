@@ -1,0 +1,6 @@
+ipdb==0.13.13
+pip-chill==1.0.3
+pydantic==2.5.3
+pymongo==4.6.1
+python-decouple==3.8
+requests==2.31.0

@@ -1,6 +1,5 @@
 def chunkify(array, chunk_size):
-    """Yield successive n-sized chunks from l.
-    """
+    """Yield successive n-sized chunks from l."""
     if not array:
         return array
 

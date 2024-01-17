@@ -3,7 +3,7 @@ import json
 import logging
 from pymongo import MongoClient, UpdateOne
 from math import ceil
-from utils import chunkify
+from get_videos.utils import chunkify
 
 logging.basicConfig(level=logging.INFO)
 

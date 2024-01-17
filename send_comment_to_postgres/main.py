@@ -13,17 +13,21 @@ def get_comments_from_mongo(
     return collection.find(dict_query)
 
 
-def insert_comments_to_postgres(
-    postgres_credentials: dict, items_content: json, video_id: str
-):
+def insert_comments_to_postgres(postgres_credentials: dict, items_content: list[dict]):
     conn = connect(
+        database="youtube",
         user=postgres_credentials["user"],
         password=postgres_credentials["password"],
         host=postgres_credentials["host"],
     )
     cur = conn.cursor()
-    # for item in items_content:
+    for item in items_content:
+        keys = ", ".join(item.keys())
+        values = ", ".join(["%s"] * len(item))
+        query = f"INSERT INTO toplevelcomment ({keys}) VALUES ({values})"
+        cur.execute(query, list(item.values()))
     # TODO usar os modelos do pydantic
+
     conn.commit()
     cur.close()
     conn.close()
@@ -50,27 +54,31 @@ if __name__ == "__main__":
         "debug": config("DEBUG"),
     }
 
-    collection_find_total = get_comments_from_mongo(
+    collection_find_toplevelcomments = get_comments_from_mongo(
         mongo_credentials=mongo_credentials, video_id="PzUmRTcozms"
     )
-    collection_find_childreen = get_comments_from_mongo(
-        mongo_credentials=mongo_credentials,
-        video_id="PzUmRTcozms",
-        dict_query={"replies.comments": {"$exists": True}},
-    )
 
-    c, d, e = 0, 0, 0
-    for i in collection_find_total:
-        logging.info(i["snippet"]["topLevelComment"]["snippet"]["textOriginal"])
-        c += 1
-    for i in collection_find_childreen:
-        d += 1
-        for comment in i["replies"]["comments"]:
-            e += 1
-            logging.info(len(i["replies"]["comments"]))
-            logging.info({comment["id"]: comment["snippet"]["textOriginal"]})
+    list_records = []
+    for i in collection_find_toplevelcomments:
+        list_records.append(
+            {
+                "id": i["snippet"]["topLevelComment"]["id"],
+                "author_name": i["snippet"]["topLevelComment"]["snippet"][
+                    "authorDisplayName"
+                ],
+                "text_original": i["snippet"]["topLevelComment"]["snippet"][
+                    "textOriginal"
+                ],
+                "published_date": i["snippet"]["topLevelComment"]["snippet"][
+                    "publishedAt"
+                ],
+            }
+        )
+    insert_comments_to_postgres(
+        postgres_credentials=postgres_credentials, items_content=list_records
+    )
 
     logging.info(f"Comentários total: {c}")
     logging.info(f"Comentários com réplicas: {d}")
     logging.info(f"Número de Réplicas: {e}")
-    logging.info(f"Comentários sem Réplicas: {c - d}")
+    # logging.info(f"Comentários sem Réplicas: {c - d}")

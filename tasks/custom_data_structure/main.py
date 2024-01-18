@@ -6,10 +6,11 @@ class ReplicaModel(BaseModel):
     id: str
     textOriginal: str
     authorDisplayName: str
-    partentId: str #id do comment
+    partentId: str  # id do comment
     publishedAt: str
     updatedAt: str
     likeCount: int
+
 
 class CommentModel(BaseModel):
     id: str

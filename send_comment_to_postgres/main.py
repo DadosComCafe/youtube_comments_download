@@ -1,7 +1,6 @@
 from pymongo import MongoClient
 from psycopg2 import connect
 import logging
-import json
 
 
 def get_comments_from_mongo(
@@ -77,8 +76,3 @@ if __name__ == "__main__":
     insert_comments_to_postgres(
         postgres_credentials=postgres_credentials, items_content=list_records
     )
-
-    logging.info(f"Comentários total: {c}")
-    logging.info(f"Comentários com réplicas: {d}")
-    logging.info(f"Número de Réplicas: {e}")
-    # logging.info(f"Comentários sem Réplicas: {c - d}")

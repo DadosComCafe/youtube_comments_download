@@ -2,7 +2,8 @@ import requests
 import os
 import json
 import logging
-from pymongo import MongoClient, UpdateOne
+
+# from pymongo import MongoClient, UpdateOne
 from math import ceil
 from google.cloud.storage import Client
 from tasks.get_videos.utils import chunkify
@@ -122,8 +123,3 @@ if __name__ == "__main__":
     }
     video_id = "PzUmRTcozms"
     video_content = get_video_content(video_id=video_id, api_key=my_api_key)
-    send_json_to_mongo(
-        dict_credentials=dict_credentials,
-        items_content=video_content,
-        video_id=video_id,
-    )

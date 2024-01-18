@@ -3,12 +3,24 @@ import json
 import logging
 from pymongo import MongoClient, UpdateOne
 from math import ceil
-from get_videos.utils import chunkify
+from tasks.get_videos.utils import chunkify
 
 logging.basicConfig(level=logging.INFO)
 
 
-def get_video_content(video_id: str, api_key: str) -> list | str:
+def export_to_json(items_content: json, video_id: str) -> None:
+    file_path = f"{video_id}.json"
+    if not items_content:
+        return
+
+    with open(file_path, mode="w", encoding="utf-8") as file:
+        json.dump(items_content, file, indent=2)
+
+
+def get_video_content(youtube_credentials: dict) -> list | str:
+    video_id = youtube_credentials["VIDEO_ID"]
+    api_key = youtube_credentials["API_KEY"]
+    logging.info(f"Requesting from {video_id} using the key {api_key}")
     page_token = ""
     target_url = f"https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet&part=replies&pageToken={page_token}&videoId={video_id}&key={api_key}&alt=json"
     video_request = requests.get(target_url)
@@ -30,6 +42,7 @@ def get_video_content(video_id: str, api_key: str) -> list | str:
             next_page_token = json_content.get("nextPageToken", "")
             logging.info(f"Using the token to get next page: {next_page_token}")
         logging.info(f"Total number of records: {len(items_content)}")
+        export_to_json(items_content=items_content, video_id=video_id)
         return items_content
 
     return "Video fora do ar!"

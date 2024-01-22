@@ -46,7 +46,6 @@ def generate_dags():
     base_dir = "dags/tasks/include"
     env = Environment(loader=FileSystemLoader(base_dir))
     template = env.get_template("templates/dag_template.jinja2")
-    # template = f"{base_dir}/templates/dag_template.jinja2"
 
     for file in os.listdir(f"{base_dir}/input"):
         logging.info(file)

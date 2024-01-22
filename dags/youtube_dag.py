@@ -1,7 +1,7 @@
 from datetime import datetime
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from airflow.operators.python import PythonOperator, BranchPythonOperator
+from airflow.operators.python import PythonOperator
 from airflow.utils.edgemodifier import Label
 from airflow.models import Variable
 from tasks.get_videos import get_video_content, upload_json_to_storage

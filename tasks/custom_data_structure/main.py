@@ -34,8 +34,12 @@ class CommentThread(BaseModel):
     def totalReplyCount(self):
         return len(self.replies.comments) if self.replies else 0
 
+    class Config:
+        alias_generator = lambda x: x
+        allow_population_by_field_name = True
+
     def __str__(self):
-        return f"CommentThread(id={self.id}, snippet={self.snippet},replies={self.replies}, totalReplyCount={self.totalReplyCount})"
+        return f"CommentThread(id={self.id}, snippet={self.snippet}, replies={self.replies}, totalReplyCount={self.totalReplyCount})"
 
 
 if __name__ == "__main__":

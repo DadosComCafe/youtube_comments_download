@@ -1,77 +1,46 @@
-from typing import Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
-class ReplieCommentSnippet(BaseModel):
-    id: str
-    textDisplay: str
-    parentId: str
-    authorDisplayName: str
-    authorChannelId: str
-    likeCount: int
-    publishedAt: str
+class CommentSnippet(BaseModel):
+    channelId: Optional[str] = None
+    videoId: Optional[str] = None
+    textDisplay: Optional[str] = None
+    textOriginal: Optional[str] = None
+    authorDisplayName: Optional[str] = None
+    authorProfileImageUrl: Optional[str] = None
+    authorChannelUrl: Optional[str] = None
+    authorChannelId: Optional[dict] = {}
+    canRate: Optional[bool] = None
+    viewerRating: Optional[str] = None
+    likeCount: Optional[int] = None
+    publishedAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 
 
-class ReplieComments(BaseModel):
-    comments: list[ReplieCommentSnippet]
+class Comment(BaseModel):
+    kind: Optional[str] = None
+    etag: Optional[str] = None
+    id: Optional[str] = None
+    snippet: Optional[CommentSnippet] = None
 
 
-class TopLevelCommentSnippet(BaseModel):
-    id: str
-    textDisplay: str
-    authorDisplayName: str
-    authorChannelId: str
-    likeCount: int
-    publishedAt: str
+class Replies(BaseModel):
+    comments: Optional[List[Comment]] = []
+
+
+class CommentThreadSnippet(BaseModel):
+    channelId: Optional[str] = None
+    videoId: Optional[str] = None
+    topLevelComment: Optional[Comment] = None
+    canReply: Optional[bool] = None
+    totalReplyCount: Optional[int] = None
+    isPublic: Optional[bool] = None
+    replies: Optional[Replies] = None
 
 
 class CommentThread(BaseModel):
-    id: str
-    snippet: TopLevelCommentSnippet
-    replies: Optional[ReplieComments] = None
-
-    @property
-    def totalReplyCount(self):
-        return len(self.replies.comments) if self.replies else 0
-
-    class Config:
-        alias_generator = lambda x: x
-        allow_population_by_field_name = True
-
-    def __str__(self):
-        return f"CommentThread(id={self.id}, snippet={self.snippet}, replies={self.replies}, totalReplyCount={self.totalReplyCount})"
-
-
-if __name__ == "__main__":
-    from datetime import datetime
-
-    snippet1 = TopLevelCommentSnippet(
-        id="comment_id_1",
-        textDisplay="This is a top-level comment",
-        authorDisplayName="John Doe",
-        authorChannelId="UC1234567890",
-        likeCount=10,
-        publishedAt=str(datetime.now()),
-    )
-
-    snippet2 = ReplieCommentSnippet(
-        id="reply_id_1",
-        textDisplay="This is a reply",
-        parentId="comment_id_1",
-        authorDisplayName="Jane Doe",
-        authorChannelId="UC0987654321",
-        likeCount=5,
-        publishedAt=str(datetime.now()),
-    )
-
-    replies = ReplieComments(comments=[snippet2])
-
-    comment_thread = CommentThread(id="thread_id_1", snippet=snippet1, replies=replies)
-
-    print(snippet1)
-    print("-" * 50)
-    print(snippet2)
-    print("-" * 50)
-    print(replies)
-    print("-" * 50)
-    print(comment_thread)
+    kind: Optional[str] = None
+    etag: Optional[str] = None
+    id: Optional[str] = None
+    snippet: Optional[CommentThreadSnippet] = None

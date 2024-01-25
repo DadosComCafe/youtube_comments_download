@@ -1,6 +1,1 @@
-from .main import (
-    ReplieCommentSnippet,
-    ReplieComments,
-    TopLevelCommentSnippet,
-    CommentThread,
-)
+from .main import CommentSnippet, Comment, CommentThread, CommentThreadSnippet, Replies

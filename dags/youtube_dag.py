@@ -5,6 +5,7 @@ from airflow.operators.python import PythonOperator
 from airflow.utils.edgemodifier import Label
 from airflow.models import Variable
 from tasks.get_videos import get_video_content, upload_json_to_storage
+from tasks.send_comment_to_postgres import insert_comment_snippet_to_postgres
 
 with DAG(
     dag_id="youtube_video_analysis",
@@ -16,6 +17,13 @@ with DAG(
     youtube_credentials = {
         "API_KEY": Variable.get("API_KEY"),
         "VIDEO_ID": Variable.get("VIDEO_ID"),
+    }
+
+    postgres_credentials = {
+        "POSTGRES_USER": Variable.get("POSTGRES_USER"),
+        "POSTGRES_PASSWORD": Variable.get("POSTGRES_PASSWORD"),
+        "POSTGRES_HOST": Variable.get("POSTGRES_HOST"),
+        "POSTGRES_PORT": Variable.get("POSTGRES_PORT"),
     }
 
     gcloud_credentials = {
@@ -50,6 +58,13 @@ with DAG(
         dag=dag,
     )
 
+    task_get_comments_from_json = PythonOperator(
+        task_id="get_comments",
+        python_callable=insert_comment_snippet_to_postgres,
+        op_args=[postgres_credentials, youtube_credentials],
+        dag=dag,
+    )
+
     (
         task_initialize_dag
         >> Label("Initializing the dag")
@@ -57,4 +72,5 @@ with DAG(
         >> Label("Making request to get threadcomments")
         >> task_upload_json_to_storage
         >> Label("Upload the generate files to cloud storage")
+        >> task_get_comments_from_json
     )

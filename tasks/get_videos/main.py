@@ -1,14 +1,86 @@
-import requests
 import os
 import json
 import logging
-
-# from pymongo import MongoClient, UpdateOne
-from math import ceil
+import pandas as pd
+from googleapiclient.discovery import build
 from google.cloud.storage import Client
-from tasks.get_videos.utils import chunkify
+
 
 logging.basicConfig(level=logging.INFO)
+
+
+def get_video_content(youtube_credentials: dict) -> list | str:
+    video_id = youtube_credentials.get("VIDEO_ID")
+    api_key = youtube_credentials.get("API_KEY")
+    logging.info(f"Requesting from {video_id} using the key {api_key}")
+    youtube = build("youtube", "v3", developerKey=api_key)
+    request = youtube.commentThreads().list(
+        part="snippet, replies", videoId=video_id, textFormat="plainText"
+    )
+    df1 = pd.DataFrame(columns=["comment", "replies", "date", "username"])
+    if not os.path.exists("json_files"):
+        os.makedirs("json_files")
+    n = 0
+    while request:
+        replies = []
+        comments = []
+        dates = []
+        usernames = []
+
+        try:
+            response = request.execute()
+            for item in response.get("items"):
+
+                comment = (
+                    item.get("snippet", {})
+                    .get("topLevelComment", {})
+                    .get("snippet", {})
+                    .get("textDisplay")
+                )
+                comments.append(comment)
+
+                user_name = (
+                    item.get("snippet", {})
+                    .get("topLevelComment", {})
+                    .get("snippet", {})
+                    .get("authorDisplayName")
+                )
+                usernames.append(user_name)
+
+                date = (
+                    item.get("snippet")
+                    .get("topLevelComment", {})
+                    .get("snippet", {})
+                    .get("publishedAt")
+                )
+                dates.append(date)
+
+                replycount = item.get("snippet", {}).get("totalReplyCount")
+
+                if replycount > 0:
+                    replies.append([])
+                    for reply in item.get("replies", {}).get("comments", []):
+                        reply = reply.get("snippet", {}).get("textDisplay")
+                        replies[-1].append(reply)
+                else:
+                    replies.append([])
+
+            df2 = pd.DataFrame(
+                {
+                    "comment": comments,
+                    "replies": replies,
+                    "user_name": usernames,
+                    "date": dates,
+                }
+            )
+            df3 = pd.concat([df1, df2], ignore_index=False)
+            df3.to_json(f"json_files/{video_id}.json", index=True)
+            request = youtube.commentThreads().list_next(request, response)
+            n += 1
+            logging.info(f"Iterating {n}")
+        except Exception as e:
+            logging.info(f"An error: {e}")
+            break
 
 
 def export_to_json(items_content: json, video_id: str) -> None:
@@ -19,62 +91,6 @@ def export_to_json(items_content: json, video_id: str) -> None:
         os.makedirs(file_path.split("/")[0])
     with open(file_path, mode="w", encoding="utf-8") as file:
         json.dump(items_content, file, indent=2)
-
-
-def get_video_content(youtube_credentials: dict) -> list | str:
-    video_id = youtube_credentials["VIDEO_ID"]
-    api_key = youtube_credentials["API_KEY"]
-    logging.info(f"Requesting from {video_id} using the key {api_key}")
-    page_token = ""
-    target_url = f"https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet&part=replies&pageToken={page_token}&videoId={video_id}&key={api_key}&alt=json"
-    video_request = requests.get(target_url)
-    json_content = video_request.json()
-
-    if video_request.status_code == 200:
-        if "nextPageToken" not in json_content:
-            items_content = json_content["items"]
-            return items_content, items_content[0]["snippet"]["videoId"]
-
-        next_page_token = json_content.get("nextPageToken")
-        items_content = []
-
-        while next_page_token != "":
-            page_token = next_page_token
-            target_url = f"https://youtube.googleapis.com/youtube/v3/commentThreads?part=snippet&part=replies&pageToken={page_token}&videoId={video_id}&key={api_key}&alt=json"
-            json_content = requests.get(target_url).json()
-            items_content.extend(json_content["items"])
-            next_page_token = json_content.get("nextPageToken", "")
-            logging.info(f"Using the token to get next page: {next_page_token}")
-        logging.info(f"Total number of records: {len(items_content)}")
-        export_to_json(items_content=items_content, video_id=video_id)
-        return items_content
-
-    return "Video fora do ar!"
-
-
-# def send_json_to_mongo(dict_credentials: dict, items_content: json, video_id: str):
-#     connection_config = f"""mongodb://{dict_credentials["mongo_user"]}:{dict_credentials["mongo_password"]}@{dict_credentials["mongo_host"]}:{dict_credentials["mongo_port"]}/"""
-#     client = MongoClient(connection_config)
-#     collection = client["youtube_comments"][video_id]
-#     try:
-#         operations = []
-#         for item in items_content:
-#             id_comment = item["snippet"]["topLevelComment"]["id"]
-#             filter_comment_id = {"commentId": id_comment}
-
-#             operations.append(UpdateOne(filter_comment_id, {"$set": item}, upsert=True))
-#         for index, chunk in enumerate(chunkify(operations, 100)):
-#             n_ops = ceil(len(operations) / 100)
-#             logging.info(
-#                 f"Executing inserting in collection, chunk {index + 1}/{n_ops}"
-#             )
-#             result = collection.bulk_write(chunk, ordered=False)
-#             logging.info(f"{result.bulk_api_result}\n")
-#         logging.info(
-#             f"The json content has been inserted successfully for the video_id: {video_id}"
-#         )
-#     except Exception as e:
-#         raise Exception(f"An error: {e}")
 
 
 def export_json_parquet(items_content: json, video_id: str):

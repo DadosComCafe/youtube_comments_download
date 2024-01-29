@@ -1,5 +1,4 @@
 import os
-import json
 import logging
 import pandas as pd
 from googleapiclient.discovery import build
@@ -17,9 +16,9 @@ def get_video_content(youtube_credentials: dict) -> list | str:
     request = youtube.commentThreads().list(
         part="snippet, replies", videoId=video_id, textFormat="plainText"
     )
-    df1 = pd.DataFrame(columns=["comment", "replies", "date", "username"])
-    if not os.path.exists("json_files"):
-        os.makedirs("json_files")
+    df = pd.DataFrame(columns=["comment", "replies", "date", "username"])
+    if not os.path.exists("csv_files"):
+        os.makedirs("csv_files")
     n = 0
     while request:
         replies = []
@@ -73,8 +72,8 @@ def get_video_content(youtube_credentials: dict) -> list | str:
                     "date": dates,
                 }
             )
-            df3 = pd.concat([df1, df2], ignore_index=False)
-            df3.to_json(f"json_files/{video_id}.json", index=True)
+            df = pd.concat([df, df2], ignore_index=True)
+            df.to_csv(f"csv_files/{video_id}.csv", index=False, encoding="utf-8")
             request = youtube.commentThreads().list_next(request, response)
             n += 1
             logging.info(f"Iterating {n}")
@@ -83,44 +82,20 @@ def get_video_content(youtube_credentials: dict) -> list | str:
             break
 
 
-def export_to_json(items_content: json, video_id: str) -> None:
-    file_path = f"json_files/{video_id}.json"
-    if not items_content:
-        return
-    if not os.path.exists(file_path.split("/")[0]):
-        os.makedirs(file_path.split("/")[0])
-    with open(file_path, mode="w", encoding="utf-8") as file:
-        json.dump(items_content, file, indent=2)
-
-
-def export_json_parquet(items_content: json, video_id: str):
-    from pandas import DataFrame
-    from pyarrow import parquet, Table
-
-    temp_df = DataFrame(items_content)
-    table = Table.from_pandas(temp_df)
-    file_path = f"videos_parquet/{video_id}.parquet"
-    try:
-        parquet.write_table(table, file_path)
-        logging.info(f"The parquet file to {video_id} has been exported successfully!")
-    except Exception as e:
-        logging.error(f"An error {e}")
-
-
-def upload_json_to_storage(cloud_storage_credentials: dict, youtube_credentials: dict):
+def upload_csv_to_storage(cloud_storage_credentials: dict, youtube_credentials: dict):
     try:
         client_storage = Client.from_service_account_info(cloud_storage_credentials)
         logging.info("The client storage has been created successfully!")
     except Exception as e:
         raise Exception(f"An error {e}")
     video_id = youtube_credentials["VIDEO_ID"]
-    file_path = f"json_files/{video_id}.json"
+    file_path = f"csv_files/{video_id}.csv"
     try:
         bucket = client_storage.bucket(
             "estudo-63ee3.appspot.com"
         )  # TODO passar o bucket como variável de ambiente
         logging.info("Using the bucket!")
-        blob = bucket.blob(f"json_files/{video_id}.json")
+        blob = bucket.blob(f"csv_files/{video_id}.csv")
         blob.upload_from_filename(file_path)
         logging.info(f"The file has been uploaded successfully!")
     except Exception as e:

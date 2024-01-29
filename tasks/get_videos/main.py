@@ -8,7 +8,14 @@ from google.cloud.storage import Client
 logging.basicConfig(level=logging.INFO)
 
 
-def get_video_content(youtube_credentials: dict) -> list | str:
+def get_video_content(youtube_credentials: dict):
+    """Using the google api client, make the get request to handle the desired data.
+    And export it as a csv file.
+
+    Args:
+        youtube_credentials (dict): The necessary youtube credentials to use in the google api client.
+
+    """
     video_id = youtube_credentials.get("VIDEO_ID")
     api_key = youtube_credentials.get("API_KEY")
     logging.info(f"Requesting from {video_id} using the key {api_key}")
@@ -83,6 +90,17 @@ def get_video_content(youtube_credentials: dict) -> list | str:
 
 
 def upload_csv_to_storage(cloud_storage_credentials: dict, youtube_credentials: dict):
+    """Upload the exported csv in the previous task to the Google Cloud Storage.
+
+    Args:
+        cloud_storage_credentials (dict): The necessary Google Cloud credentials to use the
+        `google.cloud.storage` lib.
+        youtube_credentials (dict): The dictionary containing the youtube `VIDEO_ID` key.
+
+    Raises:
+        Exception: This exception is raised in credential errors.
+        Exception: This exception is raised bucket or blob error.
+    """
     try:
         client_storage = Client.from_service_account_info(cloud_storage_credentials)
         logging.info("The client storage has been created successfully!")

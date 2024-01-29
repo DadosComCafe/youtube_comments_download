@@ -4,19 +4,23 @@ from tasks.custom_data_structure import CommentThread
 import logging
 
 
-def get_comments_from_json(youtube_credentials: dict) -> list:
+def get_comments_from_csv(youtube_credentials: dict) -> list:
     video_id = youtube_credentials["VIDEO_ID"]
-    file_path = f"json_files/{video_id}.json"
-    logging.info(f"Getting comments from json file for video_id: {video_id}")
+    file_path = f"csv_files/{video_id}.csv"
+    logging.info(f"Getting comments from csv file for video_id: {video_id}")
     with open(file_path, "r") as file:
+        logging.info(f"Opening the file")
         data = file.read()
+        logging.info(f"Get data: {data}")
     data = json.loads(data)
+    logging.info(f"Get the json data: {data}")
     return data
 
 
 def create_comment_thread_objects(youtube_credentials: dict) -> list:
-    json_data = get_comments_from_json(youtube_credentials)
-    comment_thread_objects = [CommentThread(**item) for item in json_data]
+    csv_data = get_comments_from_csv(youtube_credentials)
+    logging.info(f"CSV DATA: {[csv_data]}")
+    comment_thread_objects = [CommentThread(**item) for item in csv_data]
     logging.info(f"A sample of comment_thread: {comment_thread_objects[0]}")
     return comment_thread_objects
 
@@ -58,7 +62,7 @@ def insert_comment_snippet_to_postgres(
     postgres_credentials: dict, youtube_credentials: dict
 ):
     items_content = create_comment_thread_objects(youtube_credentials)
-    logging.info(f"Exemplo de items_content: {items_content[0]}")
+    logging.info(f"Sample of items_content: {items_content[0]}")
     conn = connect(
         database="youtube",
         user=postgres_credentials["POSTGRES_USER"],
@@ -68,7 +72,7 @@ def insert_comment_snippet_to_postgres(
     cur = conn.cursor()
     try:
         for item in items_content:
-            logging.info(f"Exemplo de item: {item.snippet}")
+            logging.info(f"Sample of item.snippet: {item.snippet}")
             insert_comment_snippet(cursor=cur, comment_snippet_data=item)
             conn.commit()
         cur.close()

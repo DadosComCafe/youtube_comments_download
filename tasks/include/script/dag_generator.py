@@ -9,6 +9,12 @@ logging.basicConfig(level=logging.INFO)
 
 
 def get_inputs_from_mongodb(dict_credentials: dict, **kwargs) -> None:
+    """Get the input from mongodb record to generate to create a xcom variable to be used in the next task.
+
+    Args:
+        dict_credentials (dict): The necessary credentials to make a mongo connection.
+    """
+
     connection_config = f"""mongodb://{dict_credentials["user"]}:{dict_credentials["password"]}@{dict_credentials["host"]}:{dict_credentials["port"]}/"""
     client = MongoClient(connection_config)
     db = client["videos_dag"]
@@ -21,6 +27,9 @@ def get_inputs_from_mongodb(dict_credentials: dict, **kwargs) -> None:
 
 
 def write_yaml_files(**kwargs):
+    """Using the containing info in mongodb record, writes a yaml file to each video_id
+    containing in the `list_of_video_ids` xcom variable, comming from `get_list_video_id` task.
+    """
     list_of_video_ids = kwargs["ti"].xcom_pull(
         task_ids="get_list_video_id", key="list_of_video_ids"
     )
@@ -43,6 +52,9 @@ def write_yaml_files(**kwargs):
 
 
 def generate_dags():
+    """Using the generated yaml file and the jinja2 template, create a dag file for each video_id containing
+    in the mongo record.
+    """
     base_dir = "dags/tasks/include"
     env = Environment(loader=FileSystemLoader(base_dir))
     template = env.get_template("templates/dag_template.jinja2")

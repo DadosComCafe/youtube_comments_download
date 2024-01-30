@@ -4,8 +4,8 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.utils.edgemodifier import Label
 from airflow.models import Variable
-from tasks.get_videos import get_video_content, upload_csv_to_storage
-from tasks.send_comment_to_postgres import insert_comment_snippet_to_postgres
+from tasks.get_videos import get_video_content, upload_parquet_to_storage
+from tasks.send_comment_to_postgres import insert_comment_to_postgres
 
 with DAG(
     dag_id="youtube_video_analysis",
@@ -51,16 +51,16 @@ with DAG(
         dag=dag,
     )
 
-    task_upload_csv_to_storage = PythonOperator(
-        task_id="upload_csv",
-        python_callable=upload_csv_to_storage,
+    task_upload_parquet_to_storage = PythonOperator(
+        task_id="upload_parquet",
+        python_callable=upload_parquet_to_storage,
         op_args=[gcloud_credentials, youtube_credentials],
         dag=dag,
     )
 
     task_get_comments_from_csv = PythonOperator(
         task_id="get_comments",
-        python_callable=insert_comment_snippet_to_postgres,
+        python_callable=insert_comment_to_postgres,
         op_args=[postgres_credentials, youtube_credentials],
         dag=dag,
     )
@@ -70,7 +70,7 @@ with DAG(
         >> Label("Initializing the dag")
         >> task_get_threadcomments
         >> Label("Making request to get threadcomments")
-        >> task_upload_csv_to_storage
+        >> task_upload_parquet_to_storage
         >> Label("Upload the generate files to cloud storage")
         >> task_get_comments_from_csv
     )

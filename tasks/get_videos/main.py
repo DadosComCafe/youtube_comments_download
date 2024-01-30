@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 def get_video_content(youtube_credentials: dict):
     """Using the google api client, make the get request to handle the desired data.
-    And export it as a csv file.
+    And export it as a parquet file.
 
     Args:
         youtube_credentials (dict): The necessary youtube credentials to use in the google api client.
@@ -24,8 +24,8 @@ def get_video_content(youtube_credentials: dict):
         part="snippet, replies", videoId=video_id, textFormat="plainText"
     )
     df = pd.DataFrame(columns=["comment", "replies", "date", "username"])
-    if not os.path.exists("csv_files"):
-        os.makedirs("csv_files")
+    if not os.path.exists("parquet_files"):
+        os.makedirs("parquet_files")
     n = 0
     while request:
         replies = []
@@ -54,7 +54,7 @@ def get_video_content(youtube_credentials: dict):
                 usernames.append(user_name)
 
                 date = (
-                    item.get("snippet")
+                    item.get("snippet", {})
                     .get("topLevelComment", {})
                     .get("snippet", {})
                     .get("publishedAt")
@@ -80,7 +80,7 @@ def get_video_content(youtube_credentials: dict):
                 }
             )
             df = pd.concat([df, df2], ignore_index=True)
-            df.to_csv(f"csv_files/{video_id}.csv", index=False, encoding="utf-8")
+            df.to_parquet(f"parquet_files/{video_id}.parquet")
             request = youtube.commentThreads().list_next(request, response)
             n += 1
             logging.info(f"Iterating {n}")
@@ -89,8 +89,10 @@ def get_video_content(youtube_credentials: dict):
             break
 
 
-def upload_csv_to_storage(cloud_storage_credentials: dict, youtube_credentials: dict):
-    """Upload the exported csv in the previous task to the Google Cloud Storage.
+def upload_parquet_to_storage(
+    cloud_storage_credentials: dict, youtube_credentials: dict
+):
+    """Upload the exported parquet in the previous task to the Google Cloud Storage.
 
     Args:
         cloud_storage_credentials (dict): The necessary Google Cloud credentials to use the
@@ -106,14 +108,14 @@ def upload_csv_to_storage(cloud_storage_credentials: dict, youtube_credentials: 
         logging.info("The client storage has been created successfully!")
     except Exception as e:
         raise Exception(f"An error {e}")
-    video_id = youtube_credentials["VIDEO_ID"]
-    file_path = f"csv_files/{video_id}.csv"
+    video_id = youtube_credentials.get("VIDEO_ID")
+    file_path = f"parquet_files/{video_id}.parquet"
     try:
         bucket = client_storage.bucket(
             "estudo-63ee3.appspot.com"
         )  # TODO passar o bucket como variável de ambiente
         logging.info("Using the bucket!")
-        blob = bucket.blob(f"csv_files/{video_id}.csv")
+        blob = bucket.blob(f"parquet_files/{video_id}.parquet")
         blob.upload_from_filename(file_path)
         logging.info(f"The file has been uploaded successfully!")
     except Exception as e:

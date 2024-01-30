@@ -37,29 +37,29 @@ def get_video_content(youtube_credentials: dict):
             response = request.execute()
             for item in response.get("items"):
 
-                comment = (
+                comment_textdisplay = (
                     item.get("snippet", {})
                     .get("topLevelComment", {})
                     .get("snippet", {})
                     .get("textDisplay")
                 )
-                comments.append(comment)
+                comments.append(comment_textdisplay)
 
-                user_name = (
+                author_displayname = (
                     item.get("snippet", {})
                     .get("topLevelComment", {})
                     .get("snippet", {})
                     .get("authorDisplayName")
                 )
-                usernames.append(user_name)
+                usernames.append(author_displayname)
 
-                date = (
+                published_date = (
                     item.get("snippet", {})
                     .get("topLevelComment", {})
                     .get("snippet", {})
                     .get("publishedAt")
                 )
-                dates.append(date)
+                dates.append(published_date)
 
                 replycount = item.get("snippet", {}).get("totalReplyCount")
 

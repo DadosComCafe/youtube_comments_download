@@ -1,1 +1,1 @@
-from .main import get_video_content, upload_csv_to_storage
+from .main import get_video_content, upload_parquet_to_storage
